@@ -1,0 +1,128 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Marks Portal | Pinnacle Global School</title>
+    <style>
+        body { font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; background: #f4f7f6; margin: 0; padding: 20px; }
+        .container { max-width: 900px; margin: auto; background: white; padding: 30px; border-radius: 8px; box-shadow: 0 2px 10px rgba(0,0,0,0.1); }
+        .header { text-align: center; margin-bottom: 30px; }
+        .header img { width: 150px; }
+        .login-box { text-align: center; padding: 50px 0; }
+        input { padding: 10px; width: 250px; border: 1px solid #ddd; border-radius: 4px; }
+        button { padding: 10px 20px; background: #2c3e50; color: white; border: none; border-radius: 4px; cursor: pointer; }
+        #dashboard { display: none; }
+        table { width: 100%; border-collapse: collapse; margin-top: 20px; }
+        th, td { border: 1px solid #ddd; padding: 8px; text-align: left; }
+        tr:nth-child(even) { background-color: #f9f9f9; }
+        .error { color: red; margin-top: 10px; }
+    </style>
+</head>
+<body>
+
+<div class="container">
+    <div class="header">
+        <img src="images/logo.png" alt="Pinnacle Global School Logo">
+        <h1>Pinnacle Global School</h1>
+        <h3>Student Marks Portal</h3>
+    </div>
+
+    <div id="login-section" class="login-box">
+        <input type="text" id="loginCode" placeholder="Enter Login Code">
+        <button onclick="handleLogin()">View Report Card</button>
+        <p id="error-msg" class="error"></p>
+    </div>
+
+    <div id="dashboard">
+        <button onclick="window.location.reload()">Logout</button>
+        <h2>Academic Performance</h2>
+        <div id="marks-table-container"></div>
+    </div>
+</div>
+
+<script>
+    const SPREADSHEET_ID = '1CQ-Ckfe1fP0po334xIUPaRzDWmsKsgNdYyaKB9e_x5U';
+    const API_KEY = 'YOUR_GOOGLE_API_KEY_HERE'; // Replace with your actual API Key
+
+    async function fetchData(range) {
+        const url = `https://sheets.googleapis.com/v4/spreadsheets/${SPREADSHEET_ID}/values/${range}?key=${API_KEY}`;
+        const response = await fetch(url);
+        return await response.json();
+    }
+
+    async function handleLogin() {
+        const code = document.getElementById('loginCode').value;
+        const errorMsg = document.getElementById('error-msg');
+        
+        try {
+            // 1. Fetch Login Codes and Admission Numbers from 'AW' sheet
+            const awData = await fetchData('AW!B4:AD'); 
+            const rows = awData.values;
+            
+            let admissionNum = null;
+            for (let row of rows) {
+                // Column AD is index 28 (A=0, B=1... AD=29, but since we start range at B, index is offset)
+                // Range B to AD: B is index 0, AD is index 28.
+                if (row[28] === code) {
+                    admissionNum = row[0]; // Column B
+                    break;
+                }
+            }
+
+            if (!admissionNum) {
+                errorMsg.innerText = "Invalid Login Code.";
+                return;
+            }
+
+            // 2. Search for Admission Number in Report Card sheets
+            const sheets = ['3rd REPORT CARD', '4th REPORT CARD', '5th REPORT CARD'];
+            let foundData = null;
+
+            for (let sheetName of sheets) {
+                const sheetContent = await fetchData(`${sheetName}!A:Z`);
+                const contentRows = sheetContent.values;
+
+                for (let i = 0; i < contentRows.length; i++) {
+                    if (contentRows[i][1] === admissionNum) { // Column B is index 1
+                        const startRow = Math.max(0, i - 7);
+                        const endRow = i + 26;
+                        foundData = contentRows.slice(startRow, endRow + 1);
+                        break;
+                    }
+                }
+                if (foundData) break;
+            }
+
+            if (foundData) {
+                displayDashboard(foundData);
+            } else {
+                errorMsg.innerText = "Data not found for this admission number.";
+            }
+
+        } catch (error) {
+            console.error(error);
+            errorMsg.innerText = "Error connecting to database.";
+        }
+    }
+
+    function displayDashboard(data) {
+        document.getElementById('login-section').style.display = 'none';
+        document.getElementById('dashboard').style.display = 'block';
+        
+        let html = '<table>';
+        data.forEach(row => {
+            html += '<tr>';
+            row.forEach(cell => {
+                html += `<td>${cell || ''}</td>`;
+            });
+            html += '</tr>';
+        });
+        html += '</table>';
+        
+        document.getElementById('marks-table-container').innerHTML = html;
+    }
+</script>
+
+</body>
+</html>
