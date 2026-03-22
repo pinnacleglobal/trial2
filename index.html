@@ -4,123 +4,256 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Marks Portal | Pinnacle Global School</title>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/html2pdf.js/0.10.1/html2pdf.bundle.min.js"></script>
     <style>
-        body { font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; background: #f4f7f6; margin: 0; padding: 20px; }
-        .container { max-width: 900px; margin: auto; background: white; padding: 30px; border-radius: 8px; box-shadow: 0 2px 10px rgba(0,0,0,0.1); }
-        .header { text-align: center; margin-bottom: 30px; }
-        .header img { width: 150px; }
-        .login-box { text-align: center; padding: 50px 0; }
-        input { padding: 10px; width: 250px; border: 1px solid #ddd; border-radius: 4px; }
-        button { padding: 10px 20px; background: #2c3e50; color: white; border: none; border-radius: 4px; cursor: pointer; }
+        :root {
+            --primary-color: #2c3e50;
+            --accent-color: #34495e;
+            --error-color: #e74c3c;
+        }
+
+        body { 
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; 
+            background: #f0f2f5; 
+            margin: 0; 
+            padding: 20px; 
+            color: #333;
+        }
+
+        .container { 
+            max-width: 1000px; 
+            margin: auto; 
+            background: white; 
+            padding: 40px; 
+            border-radius: 12px; 
+            box-shadow: 0 4px 20px rgba(0,0,0,0.08); 
+        }
+
+        .header { text-align: center; margin-bottom: 40px; }
+        .header img { width: 120px; margin-bottom: 10px; }
+        .header h1 { margin: 5px 0; color: var(--primary-color); letter-spacing: 1px; }
+
+        /* Login Styling */
+        .login-box { 
+            text-align: center; 
+            padding: 60px 0; 
+            border: 1px solid #eee;
+            border-radius: 8px;
+            background: #fafafa;
+        }
+        input[type="text"] { 
+            padding: 12px 15px; 
+            width: 280px; 
+            border: 2px solid #ddd; 
+            border-radius: 6px; 
+            font-size: 16px;
+            outline: none;
+            transition: border-color 0.3s;
+        }
+        input[type="text"]:focus { border-color: var(--primary-color); }
+        
+        .btn {
+            padding: 12px 25px; 
+            font-weight: 600;
+            border: none; 
+            border-radius: 6px; 
+            cursor: pointer; 
+            transition: opacity 0.3s;
+            display: inline-flex;
+            align-items: center;
+            gap: 8px;
+        }
+        .btn-primary { background: var(--primary-color); color: white; }
+        .btn-secondary { background: #95a5a6; color: white; margin-right: 10px; }
+        .btn-download { background: #27ae60; color: white; }
+        .btn:hover { opacity: 0.9; }
+
+        /* Dashboard & Table Styling */
         #dashboard { display: none; }
-        table { width: 100%; border-collapse: collapse; margin-top: 20px; }
-        th, td { border: 1px solid #ddd; padding: 8px; text-align: left; }
-        tr:nth-child(even) { background-color: #f9f9f9; }
-        .error { color: red; margin-top: 10px; }
+        .controls { 
+            display: flex; 
+            justify-content: space-between; 
+            margin-bottom: 20px;
+            padding-bottom: 15px;
+            border-bottom: 1px solid #eee;
+        }
+
+        #report-content { 
+            padding: 20px;
+            background: white;
+        }
+
+        .marks-table { 
+            width: 100%; 
+            border-collapse: collapse; 
+            margin: 0 auto; 
+            background: white;
+            font-size: 13px;
+        }
+
+        .marks-table td { 
+            border: 1px solid #000; 
+            padding: 6px 10px; 
+            min-height: 25px;
+            text-align: center;
+        }
+
+        /* Specific requirement: First row styling */
+        .report-header-cell {
+            font-weight: bold !important;
+            font-size: 18px !important;
+            text-align: center !important;
+            border: none !important;
+            padding: 25px 0 !important;
+            text-transform: uppercase;
+        }
+
+        /* Hide borders for empty cells to mimic Sheets */
+        .empty-cell { border: none !important; }
+
+        .error { color: var(--error-color); margin-top: 15px; font-weight: 500; }
     </style>
 </head>
 <body>
 
 <div class="container">
     <div class="header">
-        <img src="images/logo.png" alt="Pinnacle Global School Logo">
-        <h1>Pinnacle Global School</h1>
-        <h3>Student Marks Portal</h3>
+        <img src="images/logo.png" alt="Logo">
+        <h1>PINNACLE GLOBAL SCHOOL</h1>
+        <p>Student Academic Portal</p>
     </div>
 
     <div id="login-section" class="login-box">
-        <input type="text" id="loginCode" placeholder="Enter Login Code">
-        <button onclick="handleLogin()">View Report Card</button>
+        <h3>Student Login</h3>
+        <p>Please enter your unique login code to view marks</p>
+        <input type="text" id="loginCode" placeholder="Enter Login Code...">
+        <button class="btn btn-primary" onclick="handleLogin()">Access Dashboard</button>
         <p id="error-msg" class="error"></p>
     </div>
 
     <div id="dashboard">
-        <button onclick="window.location.reload()">Logout</button>
-        <h2>Academic Performance</h2>
-        <div id="marks-table-container"></div>
+        <div class="controls">
+            <button class="btn btn-secondary" onclick="window.location.reload()">Back to Login</button>
+            <button class="btn btn-download" onclick="downloadPDF()">Download as PDF</button>
+        </div>
+        
+        <div id="report-content">
+            <div id="marks-table-container"></div>
+        </div>
     </div>
 </div>
 
 <script>
     const SPREADSHEET_ID = '1CQ-Ckfe1fP0po334xIUPaRzDWmsKsgNdYyaKB9e_x5U';
-    const API_KEY = 'AIzaSyB5VIy4kIySW7bVrjNYMpL5rkqZ7Oe758E'; // Replace with your actual API Key
+    const API_KEY = 'AIzaSyB5VIy4kIySW7bVrjNYMpL5rkqZ7Oe758E'; // REPLACEME: Insert your Google API Key
 
     async function fetchData(range) {
         const url = `https://sheets.googleapis.com/v4/spreadsheets/${SPREADSHEET_ID}/values/${range}?key=${API_KEY}`;
         const response = await fetch(url);
+        if (!response.ok) throw new Error('Failed to fetch');
         return await response.json();
     }
 
     async function handleLogin() {
-        const code = document.getElementById('loginCode').value;
+        const code = document.getElementById('loginCode').value.trim();
         const errorMsg = document.getElementById('error-msg');
+        errorMsg.innerText = "Loading data...";
         
         try {
-            // 1. Fetch Login Codes and Admission Numbers from 'AW' sheet
-            const awData = await fetchData('AW!B4:AD'); 
-            const rows = awData.values;
+            // 1. Fetch Auth Data from 'AW' sheet (Range B4 to AD)
+            // Column B is index 0, Column AD is index 28
+            const authData = await fetchData('AW!B4:AD'); 
+            const rows = authData.values;
             
             let admissionNum = null;
-            for (let row of rows) {
-                // Column AD is index 28 (A=0, B=1... AD=29, but since we start range at B, index is offset)
-                // Range B to AD: B is index 0, AD is index 28.
-                if (row[28] === code) {
-                    admissionNum = row[0]; // Column B
-                    break;
+            if (rows) {
+                for (let row of rows) {
+                    if (row[28] === code) { // Check Column AD
+                        admissionNum = row[0]; // Get Column B
+                        break;
+                    }
                 }
             }
 
             if (!admissionNum) {
-                errorMsg.innerText = "Invalid Login Code.";
+                errorMsg.innerText = "Error: Invalid Login Code.";
                 return;
             }
 
-            // 2. Search for Admission Number in Report Card sheets
-            const sheets = ['3rd REPORT CARD', '4th REPORT CARD', '5th REPORT CARD'];
-            let foundData = null;
+            // 2. Search for Admission Number in Class Sheets
+            const reportSheets = ['3rd REPORT CARD', '4th REPORT CARD', '5th REPORT CARD'];
+            let finalReportData = null;
 
-            for (let sheetName of sheets) {
+            for (let sheetName of reportSheets) {
                 const sheetContent = await fetchData(`${sheetName}!A:Z`);
                 const contentRows = sheetContent.values;
 
-                for (let i = 0; i < contentRows.length; i++) {
-                    if (contentRows[i][1] === admissionNum) { // Column B is index 1
-                        const startRow = Math.max(0, i - 7);
-                        const endRow = i + 26;
-                        foundData = contentRows.slice(startRow, endRow + 1);
-                        break;
+                if (contentRows) {
+                    for (let i = 0; i < contentRows.length; i++) {
+                        if (contentRows[i][1] === admissionNum) { // Search Column B (index 1)
+                            const startRow = Math.max(0, i - 7);
+                            const endRow = i + 26; // Total 34 rows (7 before + target + 26 after)
+                            finalReportData = contentRows.slice(startRow, endRow + 1);
+                            break;
+                        }
                     }
                 }
-                if (foundData) break;
+                if (finalReportData) break;
             }
 
-            if (foundData) {
-                displayDashboard(foundData);
+            if (finalReportData) {
+                renderTable(finalReportData);
             } else {
-                errorMsg.innerText = "Data not found for this admission number.";
+                errorMsg.innerText = "Record not found in academic sheets.";
             }
 
         } catch (error) {
             console.error(error);
-            errorMsg.innerText = "Error connecting to database.";
+            errorMsg.innerText = "Error: Check your connection or API key.";
         }
     }
 
-    function displayDashboard(data) {
+    function renderTable(data) {
         document.getElementById('login-section').style.display = 'none';
         document.getElementById('dashboard').style.display = 'block';
         
-        let html = '<table>';
-        data.forEach(row => {
+        const container = document.getElementById('marks-table-container');
+        let html = '<table class="marks-table" id="pdf-table">';
+
+        // Determine max columns to ensure grid alignment
+        const maxCols = Math.max(...data.map(r => r.length));
+
+        data.forEach((row, rowIndex) => {
             html += '<tr>';
-            row.forEach(cell => {
-                html += `<td>${cell || ''}</td>`;
-            });
+            
+            // Special handling for the very first row (Report Card Title)
+            if (rowIndex === 0) {
+                const title = row[0] || 'REPORT CARD';
+                html += `<td colspan="${maxCols}" class="report-header-cell">${title}</td>`;
+            } else {
+                for (let i = 0; i < maxCols; i++) {
+                    let val = row[i] || '';
+                    let cssClass = val === '' ? 'class="empty-cell"' : '';
+                    html += `<td ${cssClass}>${val}</td>`;
+                }
+            }
             html += '</tr>';
         });
+
         html += '</table>';
-        
-        document.getElementById('marks-table-container').innerHTML = html;
+        container.innerHTML = html;
+    }
+
+    function downloadPDF() {
+        const element = document.getElementById('report-content');
+        const options = {
+            margin:       10,
+            filename:     'Pinnacle_Global_School_Marks.pdf',
+            image:        { type: 'jpeg', quality: 0.98 },
+            html2canvas:  { scale: 2, useCORS: true },
+            jsPDF:        { unit: 'mm', format: 'a4', orientation: 'portrait' }
+        };
+        html2pdf().set(options).from(element).save();
     }
 </script>
 
